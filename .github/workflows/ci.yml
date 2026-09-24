@@ -7,6 +7,29 @@ on:
   pull_request:
 
 jobs:
+  lockfile-check:
+    name: Lockfile integrity check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+          cache: pnpm
+
+      - name: Verify pnpm-lock.yaml is up to date
+        # --frozen-lockfile exits non-zero when pnpm-lock.yaml is out of sync
+        # with any package.json in the workspace.  This job surfaces that
+        # failure with a clear, dedicated name so contributors immediately know
+        # why the check failed and can run `pnpm install` locally to fix it.
+        run: pnpm install --frozen-lockfile
+
   js-ci:
     name: JS/TS — typecheck, test, build
     runs-on: ubuntu-latest
