@@ -1,0 +1,9 @@
+{
+  "name": "@linkora/notification",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"notification service not yet implemented\"",
+    "build": "echo \"notification service not yet implemented\"",
+    "test": "echo \"no tests yet\" && exit 0"
+  }
+}
