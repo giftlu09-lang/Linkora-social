@@ -1,0 +1,9 @@
+{
+  "name": "@linkora/search",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"search service not yet implemented\"",
+    "build": "echo \"search service not yet implemented\"",
+    "test": "echo \"no tests yet\" && exit 0"
+  }
+}
