@@ -7,9 +7,40 @@ on:
   pull_request:
 
 jobs:
+  lockfile-check:
+    name: Verify pnpm lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Node version is pinned in .node-version (single source of truth
+          # across CI, setup.sh, and package.json engines fields).
+          node-version-file: ".node-version"
+          cache: pnpm
+
+      - name: Verify pnpm lockfile is up to date
+        # --frozen-lockfile aborts if pnpm-lock.yaml does not satisfy the
+        # current package.json files. This is the canonical way to detect a
+        # stale or hand-edited lockfile before any other job runs.
+        run: pnpm install --frozen-lockfile
+
+      - name: Check lockfile has no uncommitted changes
+        # After a frozen install the lockfile must be identical to what is in
+        # the tree. Any diff here means the lockfile was checked in while out
+        # of sync with package.json.
+        run: git diff --exit-code pnpm-lock.yaml
+
   js-ci:
     name: JS/TS — typecheck, test, build
     runs-on: ubuntu-latest
+    needs: lockfile-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,6 +71,7 @@ jobs:
   lint:
     name: Lint TypeScript Packages
     runs-on: ubuntu-latest
+    needs: lockfile-check
 
     steps:
       - name: Checkout repository
