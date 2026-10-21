@@ -38,7 +38,7 @@ const { isSimulationError, isSimulationSuccess } = rpc.Api;
 const DEFAULT_NETWORK = "Test SDF Network ; September 2015";
 const DEFAULT_TIMEOUT = 30;
 const MAX_BYTES = 64 * 1024; // 64KB max limit for Soroban host function byte arguments
-const MAX_POST_CONTENT_LENGTH = 280;
+const MAX_POST_CONTENT_LENGTH = 500;
 
 function validatePostContent(content: string): void {
   ensureNonEmptyString(content, "content");
