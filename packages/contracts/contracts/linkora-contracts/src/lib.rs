@@ -7,87 +7,18 @@ use soroban_sdk::{
 };
 
 mod errors;
+mod storage_keys;
 mod validation;
 
 pub use errors::{ContractError, RentError};
+pub use storage_keys::StorageKey;
+use storage_keys::*;
 use validation::{
     validate_address_list, validate_amount, validate_gov_parameter, validate_non_default_address,
     validate_protocol_fee, validate_pubkey_32, validate_report_verdict,
     validate_reporter_can_report, validate_signature, validate_u32_range, validate_username,
     MAX_BIO_LEN, MAX_CONTENT_LEN, MAX_FEE_BPS, MAX_QUORUM,
 };
-
-// ── Storage Key Enum ──────────────────────────────────────────────────────────
-
-#[contracttype]
-#[derive(Clone)]
-pub enum StorageKey {
-    Post(u64),                            // persistent: post_id -> Post
-    Profile(Address),                     // persistent: user -> Profile
-    Following(Address), // persistent: user -> Vec<Address> (LEGACY — kept for migration)
-    Followers(Address), // persistent: user -> Vec<Address> (LEGACY — kept for migration)
-    Pool(Symbol),       // persistent: pool_id -> Pool
-    Like(u64, Address), // persistent: (post_id, user) -> bool
-    AuthorPosts(Address), // persistent: author -> Vec<u64> of post IDs
-    Blocks(Address),    // persistent: blocker -> Map<Address, ()>
-    BlockedBy(Address), // persistent: blocked -> Map<Address, ()> (reverse index: who blocked this user)
-    UsernameIndex(String), // persistent: username -> owner Address (reverse index for uniqueness)
-    TipCooldown(u64, Address), // temporary: (post_id, tipper) -> last-tip ledger sequence number
-    PoolDepositCooldown(Symbol, Address), // temporary: (pool_id, depositor) -> last-deposit ledger sequence number
-    // ── Adjacency-set social graph (ADR-001) ──────────────────────────────
-    Edge(Address, Address),         // persistent: (follower, followee) -> bool
-    FollowingCount(Address),        // persistent: user -> u32 total following count
-    FollowersCount(Address),        // persistent: user -> u32 total follower count
-    FollowingIdx(Address, u32),     // persistent: (user, seq) -> Address (ordered index)
-    FollowersIdx(Address, u32),     // persistent: (user, seq) -> Address (ordered index)
-    FollowingPos(Address, Address), // persistent: (follower, followee) -> u32 position in idx
-    FollowersPos(Address, Address), // persistent: (followee, follower) -> u32 position in idx
-    GraphMigrated(Address),         // persistent: user -> bool (migration tracking)
-    DmPublicKey(Address),           // persistent: user -> X25519 public key for encrypted DMs
-    CredentialRoot(Address),        // persistent: user -> credential Merkle root
-    NullifierSet(Address, BytesN<32>), // persistent: (user, nullifier) -> bool (prevents replay)
-    CredentialAuthority, // persistent: Ed25519 pubkey trusted to sign credential root updates
-    // ── Governance ────────────────────────────────────────────────────────
-    GovProposal(u64),      // persistent: proposal_id -> GovProposal
-    GovVote(u64, Address), // persistent: (proposal_id, voter) -> bool (prevents double-voting)
-    GovConfig,             // persistent: governance configuration
-    GovProposalCount,      // persistent: next proposal id counter
-    GovOpenProposalCount(Address), // persistent: proposer -> u32 count of open proposals
-    // ── Analytics Oracle ──────────────────────────────────────────────────
-    OracleKey(Symbol), // persistent: oracle_name -> BytesN<32> Ed25519 pubkey
-    AttestationNullifier(BytesN<32>), // persistent: sha256(report_cbor) -> bool (replay guard)
-    Report(u64, Address), // persistent: (post_id, reporter) -> Report
-    ReportCount(u64),  // persistent: post_id -> u32 count of reports
-    OpenReports(Address), // persistent: reporter -> u32 count of unresolved reports
-
-    // ── Lazy Cleanup (Tombstones & Indexes) ───────────────────────────────
-    DeletedPost(u64),              // persistent: post_id -> bool
-    DeletedProfile(Address),       // persistent: user -> bool
-    PostLikersCount(u64),          // persistent: post_id -> u32
-    PostLikersIdx(u64, u32),       // persistent: (post_id, seq) -> Address
-    PostReportersIdx(u64, u32),    // persistent: (post_id, seq) -> Address (Count is ReportCount)
-    PostTipCooldownsCount(u64),    // persistent: post_id -> u32
-    PostTipCooldownsIdx(u64, u32), // persistent: (post_id, seq) -> Address
-    UpgradeProposal,               // instance: staged WASM upgrade proposal
-}
-
-// ── Instance-storage key constants (small scalars, not contracttype) ──────────
-
-const POST_CT: Symbol = symbol_short!("POST_CT");
-const PROFILE_CREATED_CT: Symbol = symbol_short!("PROF_CT");
-const ADMIN: Symbol = symbol_short!("ADMIN");
-const TREASURY: Symbol = symbol_short!("TREASURY");
-const FEE_BPS: Symbol = symbol_short!("FEE_BPS");
-const INITIALIZED: Symbol = symbol_short!("INIT");
-const TIP_COOLDOWN_WINDOW: Symbol = symbol_short!("TIP_CD_W");
-const REGISTERED_USERS: Symbol = symbol_short!("R_USERS");
-const RENT_RATE_BPS_KEY: Symbol = symbol_short!("RENT_BPS");
-const MODERATION_SLASH_BPS: Symbol = symbol_short!("MOD_SL_B");
-const CONTRACT_STATE: Symbol = symbol_short!("CT_STATE");
-const ROLES: Symbol = symbol_short!("ROLES");
-const PAUSED: Symbol = symbol_short!("PAUSED");
-const MAX_POST_LEN_KEY: Symbol = symbol_short!("MAX_POST");
-const MAX_BIO_LEN_KEY: Symbol = symbol_short!("MAX_BIO");
 
 // ── Upgrade Timelock ──────────────────────────────────────────────────────────
 const UPGRADE_TIMELOCK_LEDGERS: u32 = 17_280; // approximately one day at 5s/ledger
